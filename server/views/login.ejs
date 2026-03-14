@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- Page title -->
+  <title><%= pageTitle || "Login" %> | Family Travel Tracker</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Load frontend assets JS and CSS -->
+  <%- assets %>
+</head>
+
+<body>
+
+  <!-- Centered login layout -->
+  <div class="login-shell">
+
+    <!-- Login card container -->
+    <div class="login-card">
+
+      <!-- App title -->
+      <h1 class="login-title">
+        Family Travel Tracker
+      </h1>
+
+      <!-- Subtitle text -->
+      <p class="login-subtitle">
+        <%= subtitle || "Sign in to continue" %>
+      </p>
+
+      <!-- Show login error if credentials are incorrect -->
+      <% if (error) { %>
+        <div class="login-error">
+          <%= error %>
+        </div>
+      <% } %>
+
+      <!-- Login form -->
+      <form method="POST" action="<%= formAction %>" class="login-form">
+
+        <!-- Username input -->
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          autocomplete="username"
+          required
+        />
+
+        <!-- Password input -->
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+        />
+
+        <!-- Submit button -->
+        <button type="submit">
+          Sign In
+        </button>
+
+      </form>
+
+      <!-- Small footer message -->
+      <div class="login-footer">
+        <p>
+          Track where your family has traveled around the world.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

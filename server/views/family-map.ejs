@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Page title -->
+    <title><%= title %></title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Load frontend assets -->
+    <%- assets %>
+  </head>
+
+  <body>
+    <div class="page-shell map-shell">
+      <main class="map-page">
+
+        <!-- Top navigation bar -->
+        <header class="top-bar map-top-bar">
+
+          <!-- Page branding -->
+          <div class="brand">
+            <div class="brand-badge">✈️</div>
+
+            <div class="brand-text">
+              <div class="brand-title">Family map</div>
+
+              <!-- Subtitle explaining feature status -->
+              <div class="brand-subtitle">
+                Combined family view is coming soon
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation buttons -->
+          <nav class="top-links">
+            <a href="/" class="map-btn map-btn-primary">
+              ← Back to dashboard
+            </a>
+
+            <a href="/map" class="map-btn map-btn-secondary">
+              My map only
+            </a>
+          </nav>
+        </header>
+
+        <!-- Placeholder section while feature is under development -->
+        <section class="map-page-full under-construction-page">
+
+          <div class="under-construction-card">
+
+            <!-- Feature announcement -->
+            <h1>Family Map Coming Soon</h1>
+
+            <p>
+              Still building the combined family travel view.
+              For now, you can explore the individual map and keep adding/removing visits.
+            </p>
+
+            <!-- Action buttons -->
+            <div class="under-construction-actions">
+
+              <!-- Link to personal map -->
+              <a href="/map" class="map-btn map-btn-primary">
+                View my map
+              </a>
+
+              <!-- Return to dashboard -->
+              <a href="/" class="map-btn map-btn-secondary">
+                Back to dashboard
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title><%= title || "Family Travel Tracker" %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <%- assets %>
+</head>
+<body>
+<div class="dashboard-shell">
+
+  <!-- Dashboard Title-->
+  <header class="dashboard-header">
+    <div>
+      <h1 class="section-title">Family Travel Tracker</h1>
+      <p class="section-subtitle"><%= currentUser.name %>’s dashboard</p>
+    </div>
+
+    <!-- logout -->
+    <form method="POST" action="/logout">
+      <button class="map-btn map-btn-secondary" type="submit">
+        Log out
+      </button>
+    </form>
+  </header>
+
+
+  <!-- Dashboard Stats-->
+  <section class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">Countries visited</div>
+      <div class="stat-value"><%= stats.totalCountries %></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Continents covered</div>
+      <div class="stat-value"><%= stats.continents %></div>
+      <div class="stat-hint">Coming soon</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Most recent trip</div>
+      <% if (stats.mostRecent) { %>
+        <div class="stat-value"><%= stats.mostRecent.name %></div>
+        <div class="stat-hint"><%= stats.mostRecent.date %></div>
+      <% } else { %>
+        <div class="stat-value">—</div>
+        <div class="stat-hint">No trips yet</div>
+      <% } %>
+    </div>
+  </section>
+
+
+  <!-- Main Dashboard Layout-->
+  <section class="main-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- Map Preview Card-->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>World map</h2>
+          </div>
+
+          <a href="/map" class="view-map-link">View full map →</a>
+        </div>
+
+        <a href="/map" class="world-thumb-link">
+          <img
+            src="/static/world-map.png"
+            alt="World map preview"
+            class="world-map-img"
+          />
+        </a>
+      </section>
+
+
+      <!-- Add a Visit -->
+      <section class="card add-visit-card">
+        <div class="card-header">
+          <div>
+            <h2>Add a visit</h2>
+            <p class="card-subtitle">Search a country and optionally add a date</p>
+          </div>
+        </div>
+
+        <% if (error) { %>
+          <div class="form-error"><%= error %></div>
+        <% } %>
+
+        <form action="/add" method="POST">
+          <div class="add-form-row">
+            <input
+              name="country"
+              class="add-input"
+              placeholder="e.g. Spain, Japan, Brazil"
+            />
+
+            <input
+              type="date"
+              name="visited_on"
+              class="add-date"
+            />
+
+            <button class="add-button">Add</button>
+          </div>
+        </form>
+      </section>
+
+    </div>
+
+
+    <!-- RIGHT COLUMN -->
+    <aside>
+
+      <!-- Recent Activity -->
+      <section class="card activity-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recent activity</div>
+            <div class="card-subtitle">Latest changes on your dashboard</div>
+          </div>
+        </div>
+
+        <% if (!recent.length) { %>
+          <p class="empty-state">
+            No activity yet.
+          </p>
+        <% } else { %>
+          <ul class="activity-list">
+            <% recent.forEach(r => { %>
+              <li class="activity-item">
+                Added <strong><%= r.country_name %></strong>
+
+                <% if (r.visited_on) { %>
+                  <%= new Date(r.visited_on).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric"
+                  }) %>
+                <% } %>
+
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </section>
+
+
+      <!-- Travel Goal -->
+      <section class="card goal-card">
+
+        <div class="card-header">
+          <div>
+            <div class="card-title">Travel goal</div>
+            <div class="card-subtitle">Keep building your map</div>
+          </div>
+
+          <div class="goal-percent">
+            <%= stats.goal.percent %>%
+          </div>
+        </div>
+
+        <div class="goal-content">
+
+          <div class="goal-top-row">
+            <div class="goal-number">
+              <strong><%= stats.totalCountries %></strong>
+              <span>/ <%= stats.goal.nextMilestone %> countries</span>
+            </div>
+          </div>
+
+          <div class="goal-bar">
+            <div
+              class="goal-bar-fill"
+              style="width: <%= stats.goal.percent + '%' %>"
+
+            ></div>
+          </div>
+
+          <div class="goal-meta">
+            <span>Next milestone: <%= stats.goal.nextMilestone %> countries</span>
+            <span><%= stats.goal.remainingToGoal %> to go</span>
+          </div>
+
+          <p class="goal-hint">
+            Keep exploring the world and filling in your travel map.
+          </p>
+        </div>
+      </section>
+    </aside>
+  </section>
+</div>
+</body>
+</html>

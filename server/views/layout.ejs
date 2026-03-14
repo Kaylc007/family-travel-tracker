@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8"/>
+
+    <!-- Responsive layout -->
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <!-- Page title -->
+    <title><%= title || "Family Travel Tracker" %></title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Load project assets JS/CSS from Vite -->
+    <% if (assets) { %><%- assets %><% } %>
+  </head>
+
+  <body class="min-h-full bg-slate-50 text-slate-900">
+
+    <!-- Top navigation bar -->
+    <header class="bg-white border-b sticky top-0 z-50">
+
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+
+        <!-- App branding -->
+        <div class="flex items-center gap-3">
+
+          <!-- User accent color -->
+          <div class="h-8 w-8 rounded-xl shadow-sm" style="background:<%= accent || '#14b8a6' %>"></div>
+
+          <h1 class="text-lg font-semibold">
+            Family Travel Tracker
+          </h1>
+        </div>
+
+        <!-- User switcher -->
+        <form method="POST" action="/user" class="flex items-center gap-2">
+
+          <!-- Select active user -->
+          <select name="user" class="border rounded-lg px-3 py-1.5">
+            <% (users || []).forEach(u => { %>
+              <option value="<%= u.id %>" <%= (currentUser && u.id === currentUser.id) ? 'selected' : '' %>>
+                <%= u.name %>
+              </option>
+            <% }) %>
+          </select>
+
+          <!-- Switch user -->
+          <button class="px-3 py-1.5 rounded-lg bg-slate-900 text-white">
+            Switch
+          </button>
+
+          <!-- Create new user -->
+          <button name="add" value="new" class="px-3 py-1.5 rounded-lg border">
+            + New
+          </button>
+
+        </form>
+      </div>
+    </header>
+
+    <!-- Main page content -->
+    <main class="mx-auto max-w-6xl px-4 py-6">
+      <%- body %>
+    </main>
+  </body>
+</html>

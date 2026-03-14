@@ -1,0 +1,86 @@
+<!-- views/map.ejs -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Page title -->
+    <title><%= title %></title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Load JS and CSS from Vite -->
+    <%- assets %>
+  </head>
+
+  <body>
+    <div class="page-shell map-shell">
+      <main class="map-page">
+
+        <!-- Check if the map is showing combined family visits -->
+        <% 
+          const hasCombined = typeof combinedVisits !== "undefined" && combinedVisits;
+        %>
+
+        <!-- Top navigation bar -->
+        <header class="top-bar map-top-bar">
+
+          <!-- Page branding and title -->
+          <div class="brand">
+            <div class="brand-badge">✈️</div>
+
+            <div class="brand-text">
+              <div class="brand-title">World map</div>
+
+              <!-- Subtitle changes depending on map type -->
+              <% if (hasCombined) { %>
+                <div class="brand-subtitle">
+                  Combined view of your family’s travels
+                </div>
+              <% } else { %>
+                <div class="brand-subtitle">
+                  Full view of Demo's travels
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Navigation buttons -->
+          <nav class="top-links">
+
+            <!-- Return to dashboard -->
+            <a href="/" class="map-btn map-btn-primary">
+              ← Back to dashboard
+            </a>
+
+            <!-- Toggle between personal map and family map -->
+            <% if (hasCombined) { %>
+              <a href="/map" class="map-btn map-btn-secondary">
+                My map only
+              </a>
+            <% } else { %>
+              <a href="/family-map" class="map-btn map-btn-secondary">
+                Family map
+              </a>
+            <% } %>
+
+          </nav>
+        </header>
+
+        <!-- Full screen map container -->
+        <section class="map-page-full">
+          <div class="map-full-container">
+
+            <!-- Map element used by the frontend JS -->
+            <div
+              id="world-map-full"
+              data-visited="<%= visitedCodes || '' %>"
+              data-combined='<%- hasCombined ? combinedVisits : "[]" %>'
+            ></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

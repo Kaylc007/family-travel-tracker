@@ -1,0 +1,30 @@
+<% const title = "New User"; %>
+
+<!-- Form page for creating a new user -->
+<section class="bg-white rounded-2xl p-6 shadow max-w-lg">
+
+  <!-- Page title -->
+  <h2 class="text-xl font-semibold mb-4">Create a New User</h2>
+
+  <!-- Form that submits to /new route -->
+  <form method="POST" action="/new" class="space-y-3">
+
+    <!-- User name input -->
+    <div>
+      <label class="block text-sm text-slate-600 mb-1">Name</label>
+      <input name="name" required class="w-full border rounded-lg px-3 py-2" />
+    </div>
+
+    <!-- Coming Soon: Optional color used for the user's map accent-->
+    <div>
+      <label class="block text-sm text-slate-600 mb-1">Accent Color (CSS)</label>
+      <input name="color" placeholder="teal" class="w-full border rounded-lg px-3 py-2" />
+    </div>
+
+    <!-- Submit button -->
+    <button class="px-4 py-2 rounded-lg text-white" style="background:#0f172a">
+      Create
+    </button>
+
+  </form>
+</section>
