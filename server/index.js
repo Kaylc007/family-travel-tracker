@@ -1,6 +1,5 @@
 import "dotenv/config";
 import path from "node:path";
-import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import bcrypt from "bcrypt";
@@ -128,11 +127,14 @@ async function requireLogin(req, res, next) {
   }
 }
 
-// Variables for Vite in dev and manifest in production
-let vite;
-let manifest;
+
+
+
 
 // Use Vite middleware in development
+// Use Vite middleware in development
+let vite;
+
 if (isDev) {
   const { createServer } = await import("vite");
   vite = await createServer({
@@ -140,15 +142,6 @@ if (isDev) {
     server: { middlewareMode: true }
   });
   app.use(vite.middlewares);
-} else {
-  // Serve built assets in production
-  app.use(
-    "/assets",
-    express.static(path.join(process.cwd(), "dist", "assets"), { maxAge: "1y" })
-  );
-  manifest = JSON.parse(
-    fs.readFileSync(path.join(process.cwd(), "dist", "manifest.json"), "utf-8")
-  );
 }
 
 // Load the correct CSS and JS files
@@ -160,16 +153,10 @@ function assetTags() {
     `;
   }
 
-  const entry = manifest["client/main.js"];
-  const js = entry?.file
-    ? `<script type="module" src="/assets/${entry.file}"></script>`
-    : "";
-
-  const css = (entry?.css || [])
-    .map((file) => `<link rel="stylesheet" href="/assets/${file}">`)
-    .join("\n");
-
-  return `${css}\n${js}`;
+  return `
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/main.js"></script>
+  `;
 }
 
 // Get all visited countries for one user
