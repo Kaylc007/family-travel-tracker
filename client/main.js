@@ -1,5 +1,3 @@
-import "./styles.css";
-
 // Set up the interactive world map inside a container element
 async function initInteractiveMap(container) {
   // Get visited country codes from the server
