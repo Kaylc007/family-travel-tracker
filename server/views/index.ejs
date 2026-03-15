@@ -13,7 +13,7 @@
   <header class="dashboard-header">
     <div>
       <h1 class="section-title">Family Travel Tracker</h1>
-      <p class="section-subtitle"><%= currentUser.name %>’s dashboard</p>
+      <p class="section-subtitle"><%= currentUser.name %>'s dashboard</p>
     </div>
 
     <!-- logout -->
@@ -68,11 +68,13 @@
         </div>
 
         <a href="/map" class="world-thumb-link">
-          <img
+          <div class="mini-map">
+            <img
             src="/world-map.png"
             alt="World map preview"
-            class="world-map-img"
-          />
+            class="mini-map-img"
+            />
+          </div>
         </a>
       </section>
 

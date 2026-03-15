@@ -1,46 +1,37 @@
 import "dotenv/config";
 import path from "node:path";
 import fs from "node:fs";
-import express from "express";
 import { fileURLToPath } from "node:url";
-import crypto from "node:crypto";
+import express from "express";
+import bcrypt from "bcrypt";
 import { query } from "./db.js";
 
-
-// Express backend for the Family Travel Tracker.
-// Responsible for rendering pages, storing travel data in PostgreSQL,
-// handling login, and serving frontend assets.
-
+// Get file path in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Check if the app is running in development mode
 const isDev = process.env.NODE_ENV !== "production";
+
+// Create the Express app
 const app = express();
 
+// Static files from the public folder
+app.use(express.static(path.join(process.cwd(), "public")));
 
-// Serve static frontend files such as images and icons from the public folder.
-
-// const staticDir = path.join(__dirname, "..", "client", "public");
-// app.use("/static", express.static(staticDir));
-
-// Set up EJS so the server can render dynamic pages such as the dashboard and maps.
+// Set up EJS as the view engine
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Allow Express to process form submissions and JSON requests from the frontend.
+// Data and JSON in requests
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Login credentials and path come from environment variables.
-const LOGIN_PATH = process.env.LOGIN_PATH || "/hidden-login";
-const LOGIN_USERNAME = process.env.LOGIN_USERNAME || "";
-const LOGIN_PASSWORD = process.env.LOGIN_PASSWORD || "";
+// Login route path and cookie name
+const LOGIN_PATH = process.env.LOGIN_PATH || "/login";
+const AUTH_COOKIE_NAME = "demo_user_id";
 
-// Session token for authentication.
-// Generate a random one if it is not provided in the environment.
-const LOGIN_SESSION_TOKEN =
-  process.env.LOGIN_SESSION_TOKEN || crypto.randomBytes(24).toString("hex");
-
-// Helper function to read cookies from the request.
+// Turn the cookie string into an object
 function parseCookies(cookieHeader = "") {
   return Object.fromEntries(
     cookieHeader
@@ -57,25 +48,91 @@ function parseCookies(cookieHeader = "") {
   );
 }
 
-// Verify the user is logged in by checking the auth cookie.
-function isLoggedIn(req) {
+// Get the logged-in user id from the cookie
+function getLoggedInUserId(req) {
   const cookies = parseCookies(req.headers.cookie);
-  return cookies.user_auth === LOGIN_SESSION_TOKEN;
+  const raw = cookies[AUTH_COOKIE_NAME];
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// Check if the user is logged in before allowing access to a route.
-function requireLogin(req, res, next) {
-  if (!isLoggedIn(req)) {
-    return res.redirect(LOGIN_PATH);
+// Create the login cookie
+function buildAuthCookie(userId) {
+  const secure = !isDev ? "; Secure" : "";
+  return `${AUTH_COOKIE_NAME}=${encodeURIComponent(
+    String(userId)
+  )}; HttpOnly; Path=/; SameSite=Lax${secure}`;
+}
+
+// Clear the login cookie
+function clearAuthCookie() {
+  const secure = !isDev ? "; Secure" : "";
+  return `${AUTH_COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
+
+// Get all users from the database
+async function getUsers() {
+  return await query("SELECT * FROM users ORDER BY id ASC;");
+}
+
+// Get one user by id
+async function getUserById(id) {
+  const rows = await query(
+    `
+    SELECT id, name, color
+    FROM users
+    WHERE id = $1
+    LIMIT 1;
+    `,
+    [id]
+  );
+
+  return rows[0] || null;
+}
+
+// Get one user by name for login
+async function getUserByName(name) {
+  const rows = await query(
+    `
+    SELECT id, name, color, password_hash
+    FROM users
+    WHERE LOWER(name) = LOWER($1)
+    LIMIT 1;
+    `,
+    [String(name || "").trim()]
+  );
+
+  return rows[0] || null;
+}
+
+// Protect routes so only logged-in users can access them
+async function requireLogin(req, res, next) {
+  try {
+    const userId = getLoggedInUserId(req);
+
+    if (!userId) {
+      return res.redirect(LOGIN_PATH);
+    }
+
+    const user = await getUserById(userId);
+
+    if (!user) {
+      res.setHeader("Set-Cookie", clearAuthCookie());
+      return res.redirect(LOGIN_PATH);
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
   }
-  next();
 }
 
-// Configure Vite.
-// Dev mode uses Vite middleware, production serves built files.
+// Variables for Vite in dev and manifest in production
 let vite;
 let manifest;
 
+// Use Vite middleware in development
 if (isDev) {
   const { createServer } = await import("vite");
   vite = await createServer({
@@ -84,6 +141,7 @@ if (isDev) {
   });
   app.use(vite.middlewares);
 } else {
+  // Serve built assets in production
   app.use(
     "/assets",
     express.static(path.join(process.cwd(), "dist", "assets"), { maxAge: "1y" })
@@ -93,7 +151,7 @@ if (isDev) {
   );
 }
 
-// Helper function to load the correct frontend assets in dev or production.
+// Load the correct CSS and JS files
 function assetTags() {
   if (isDev) {
     return `
@@ -114,22 +172,7 @@ function assetTags() {
   return `${css}\n${js}`;
 }
 
-// Track which user is currently active in the app.
-let currentUserId = 1;
-
-// Fetch all users from the database.
-async function getUsers() {
-  return await query("SELECT * FROM users ORDER BY id ASC;");
-}
-
-// Return the active user from the user list.
-// Default to the first user if needed.
-async function getCurrentUser() {
-  const users = await getUsers();
-  return users.find((u) => u.id === Number(currentUserId)) || users[0];
-}
-
-// Fetch the list of countries the user has visited.
+// Get all visited countries for one user
 async function getVisitedForUser(uid) {
   return await query(
     `
@@ -143,7 +186,7 @@ async function getVisitedForUser(uid) {
   );
 }
 
-// Fetch the most recent countries visited by the user.
+// Get the most recent activity for one user
 async function getRecent(uid, limit = 5) {
   return await query(
     `
@@ -158,14 +201,14 @@ async function getRecent(uid, limit = 5) {
   );
 }
 
-// Get travel statistics for the current user.
+// Build dashboard stats for one user
 async function getStats(uid) {
   const [{ count: totalCountries } = { count: 0 }] = await query(
     `SELECT COUNT(*)::int AS count FROM visited_countries WHERE user_id = $1;`,
     [uid]
   );
 
-  // Placeholder value for continent tracking.
+  // Placeholder until continent logic is added
   const continents = 0;
 
   const mostRecentRow = (
@@ -182,7 +225,7 @@ async function getStats(uid) {
     )
   )[0];
 
-  // Travel milestones to show progress and the next goal.
+  // Milestones used for the travel goal card
   const milestones = [10, 25, 50, 100];
   const nextMilestone =
     milestones.find((milestone) => totalCountries < milestone) || 100;
@@ -209,7 +252,7 @@ async function getStats(uid) {
   };
 }
 
-// Fetch visited countries across all users.
+// Get combined visit data for all users
 async function getCombinedVisits() {
   return await query(
     `
@@ -231,82 +274,99 @@ async function getCombinedVisits() {
   );
 }
 
-// Show the login page for the app.
-app.get(LOGIN_PATH, (req, res) => {
-  const hasLoginConfigured = LOGIN_USERNAME && LOGIN_PASSWORD;
+// Show the login page
+app.get(LOGIN_PATH, async (req, res, next) => {
+  try {
+    const users = await getUsers();
 
-  if (!hasLoginConfigured) {
-    return res
-      .status(500)
-      .send(
-        `<pre>Missing LOGIN_USERNAME or LOGIN_PASSWORD in your .env file.</pre>`
-      );
+    if (!users.length) {
+      return res.redirect("/setup");
+    }
+
+    const userId = getLoggedInUserId(req);
+
+    if (userId) {
+      const user = await getUserById(userId);
+      if (user) {
+        return res.redirect("/");
+      }
+    }
+
+    res.render("login", {
+      assets: assetTags(),
+      error: null,
+      formAction: LOGIN_PATH,
+      pageTitle: "Login",
+      subtitle: "Sign in"
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (isLoggedIn(req)) {
-    return res.redirect("/");
-  }
-
-  res.render("login", {
-    assets: assetTags(),
-    error: null,
-    formAction: LOGIN_PATH,
-    pageTitle: "Login",
-    subtitle: "Sign in"
-  });
 });
 
-// Process login and set the auth cookie if credentials are correct.
-app.post(LOGIN_PATH, (req, res) => {
-  const { username, password } = req.body;
+// Handle login form submission
+app.post(LOGIN_PATH, async (req, res, next) => {
+  try {
+    const name = String(req.body.username || "").trim();
+    const password = String(req.body.password || "");
 
-  if (!LOGIN_USERNAME || !LOGIN_PASSWORD) {
-    return res
-      .status(500)
-      .send(
-        `<pre>Missing LOGIN_USERNAME or LOGIN_PASSWORD in your .env file.</pre>`
-      );
-  }
+    if (!name || !password) {
+      return res.status(401).render("login", {
+        assets: assetTags(),
+        error: "Enter both name and password.",
+        formAction: LOGIN_PATH,
+        pageTitle: "Login",
+        subtitle: "Sign in"
+      });
+    }
 
-  if (username === LOGIN_USERNAME && password === LOGIN_PASSWORD) {
-    res.setHeader(
-      "Set-Cookie",
-      `user_auth=${encodeURIComponent(
-        LOGIN_SESSION_TOKEN
-      )}; HttpOnly; Path=/; SameSite=Lax`
-    );
+    const user = await getUserByName(name);
+
+    if (!user || !user.password_hash) {
+      return res.status(401).render("login", {
+        assets: assetTags(),
+        error: "Incorrect name or password.",
+        formAction: LOGIN_PATH,
+        pageTitle: "Login",
+        subtitle: "Sign in"
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatches) {
+      return res.status(401).render("login", {
+        assets: assetTags(),
+        error: "Incorrect name or password.",
+        formAction: LOGIN_PATH,
+        pageTitle: "Login",
+        subtitle: "Sign in"
+      });
+    }
+
+    res.setHeader("Set-Cookie", buildAuthCookie(user.id));
     return res.redirect("/");
+  } catch (err) {
+    next(err);
   }
-
-  res.status(401).render("login", {
-    assets: assetTags(),
-    error: "Incorrect username or password.",
-    formAction: LOGIN_PATH,
-    pageTitle: "Login",
-    subtitle: "Sign in"
-  });
 });
 
-// Clear the login cookie and send the user back to login.
+// Log the user out
 app.post("/logout", (_req, res) => {
-  res.setHeader(
-    "Set-Cookie",
-    "user_auth=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax"
-  );
+  res.setHeader("Set-Cookie", clearAuthCookie());
   res.redirect(LOGIN_PATH);
 });
 
-// Load the dashboard with the current user's travel data.
+// Show the main dashboard
 app.get("/", requireLogin, async (req, res, next) => {
   try {
     const users = await getUsers();
     if (!users.length) return res.redirect("/setup");
 
-    const currentUser = await getCurrentUser();
+    const currentUser = req.user;
     const countries = await getVisitedForUser(currentUser.id);
     const recent = await getRecent(currentUser.id);
     const stats = await getStats(currentUser.id);
-
     const visitedCodes = countries.map((c) => c.country_code).join(",");
 
     res.render("index", {
@@ -326,13 +386,13 @@ app.get("/", requireLogin, async (req, res, next) => {
   }
 });
 
-// Show the interactive world map for the active user.
+// Show the personal map page
 app.get("/map", requireLogin, async (req, res, next) => {
   try {
     const users = await getUsers();
     if (!users.length) return res.redirect("/setup");
 
-    const currentUser = await getCurrentUser();
+    const currentUser = req.user;
     const countries = await getVisitedForUser(currentUser.id);
     const visitedCodes = countries.map((c) => c.country_code).join(",");
 
@@ -349,7 +409,7 @@ app.get("/map", requireLogin, async (req, res, next) => {
   }
 });
 
-// Coming soon: family map that will combine visits from all users.
+// Show the family map placeholder page
 app.get("/family-map", requireLogin, async (req, res, next) => {
   try {
     const users = await getUsers();
@@ -357,7 +417,7 @@ app.get("/family-map", requireLogin, async (req, res, next) => {
       return res.redirect("/setup");
     }
 
-    const currentUser = await getCurrentUser();
+    const currentUser = req.user;
 
     res.render("family-map", {
       title: "Family map · Coming Soon",
@@ -369,12 +429,12 @@ app.get("/family-map", requireLogin, async (req, res, next) => {
   }
 });
 
-// Route shown when the database is not set up yet.
+// Show setup instructions if the database is empty
 app.get("/setup", (_req, res) => {
   res.send(`<pre>Run your SQL in sql/schema.sql, then revisit /</pre>`);
 });
 
-// Handle adding a new visited country.
+// Add a country visit from the dashboard form
 app.post("/add", requireLogin, async (req, res) => {
   const { country, visited_on } = req.body;
   const trimmedCountry = String(country || "").trim();
@@ -384,7 +444,7 @@ app.post("/add", requireLogin, async (req, res) => {
       throw new Error("Please enter a valid country.");
     }
 
-    // Match the country name even if the user doesn't type it exactly.
+    // Try to match the country name from the database
     const row = (
       await query(
         `
@@ -401,14 +461,14 @@ app.post("/add", requireLogin, async (req, res) => {
       throw new Error("Country not found");
     }
 
-    // Avoid inserting a duplicate visit if the user already added this country.
+    // Save the visit for the logged-in user
     await query(
       `
       INSERT INTO visited_countries (country_code, user_id, visited_on)
       VALUES ($1, $2, $3)
       ON CONFLICT DO NOTHING;
       `,
-      [row.country_code, currentUserId, visited_on || null]
+      [row.country_code, req.user.id, visited_on || null]
     );
 
     res.redirect("/");
@@ -424,41 +484,34 @@ app.post("/add", requireLogin, async (req, res) => {
   }
 });
 
-// Coming soon: Switch between users so the app shows their travel history.
-app.post("/user", requireLogin, async (req, res) => {
-  if (req.body.add === "new") {
-    return res.render("new", { assets: assetTags() });
-  }
-
-  currentUserId = Number(req.body.user);
+// Placeholder route for switching users later
+app.post("/user", requireLogin, (_req, res) => {
   res.redirect("/");
 });
 
-// Add a new user to the database.
-app.post("/new", requireLogin, async (req, res) => {
-  const { name, color } = req.body;
-  const row = (
-    await query(
-      "INSERT INTO users (name, color) VALUES ($1, $2) RETURNING *;",
-      [name, color || "teal"]
-    )
-  )[0];
-
-  currentUserId = row.id;
+// Placeholder route for creating users later
+app.post("/new", requireLogin, (_req, res) => {
   res.redirect("/");
 });
 
-// Add or remove a visited country for the user.
+// Toggle a country on or off from the interactive map
 app.post("/toggle", requireLogin, async (req, res) => {
-  const { code } = req.body;
-  const uid = currentUserId;
+  const code = String(req.body.code || "")
+    .trim()
+    .toUpperCase();
+  const uid = req.user.id;
 
   try {
+    if (!code) {
+      return res.status(400).json({ error: "Missing country code." });
+    }
+
     const existing = await query(
       "SELECT 1 FROM visited_countries WHERE user_id = $1 AND country_code = $2",
       [uid, code]
     );
 
+    // Remove the country if it already exists
     if (existing.length) {
       await query(
         "DELETE FROM visited_countries WHERE user_id = $1 AND country_code = $2",
@@ -467,6 +520,7 @@ app.post("/toggle", requireLogin, async (req, res) => {
       return res.json({ status: "removed" });
     }
 
+    // Add the country if it does not exist yet
     await query(
       `
       INSERT INTO visited_countries (country_code, user_id, visited_on)
@@ -483,17 +537,17 @@ app.post("/toggle", requireLogin, async (req, res) => {
   }
 });
 
-// Handle server errors.
+// Basic error handler
 app.use((err, req, res, _next) => {
   console.error(err);
   res.status(500).send(isDev ? `<pre>${err.stack}</pre>` : "Server error");
 });
 
-// Start the Express server.
+// Start the local server in development
 if (process.env.NODE_ENV !== "production") {
   const PORT = Number(process.env.PORT) || 3000;
   app.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`));
 }
 
+// Export the app for production/serverless use
 export default app;
-
