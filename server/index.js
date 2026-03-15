@@ -490,7 +490,10 @@ app.use((err, req, res, _next) => {
 });
 
 // Start the Express server.
-const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`)
-);
+if (process.env.NODE_ENV !== "production") {
+  const PORT = Number(process.env.PORT) || 3000;
+  app.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`));
+}
+
+export default app;
+
