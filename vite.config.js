@@ -15,9 +15,9 @@ export default defineConfig({
     outDir: "dist",
 
     // Generate manifest so the server can load the correct files
-    manifest: true,
+    manifest: "manifest.json",
 
-    // Entry point for the frontend 
+    // Entry point for the frontend
     rollupOptions: {
       input: "/client/main.js"
     }
