@@ -37,7 +37,7 @@ async function initInteractiveMap(container) {
   // Load the SVG world map
   let svgText;
   try {
-    const res = await fetch("/static/world.svg");
+    const res = await fetch("/world.svg");
     if (!res.ok) throw new Error("Map load failed");
     svgText = await res.text();
   } catch (err) {
