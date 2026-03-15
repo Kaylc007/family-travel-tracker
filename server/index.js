@@ -19,8 +19,8 @@ const app = express();
 
 // Serve static frontend files such as images and icons from the public folder.
 
-const staticDir = path.join(__dirname, "..", "client", "public");
-app.use("/static", express.static(staticDir));
+// const staticDir = path.join(__dirname, "..", "client", "public");
+// app.use("/static", express.static(staticDir));
 
 // Set up EJS so the server can render dynamic pages such as the dashboard and maps.
 app.set("view engine", "ejs");
