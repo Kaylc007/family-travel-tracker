@@ -5,7 +5,10 @@ const { Pool } = pkg;
 // Create a PostgreSQL connection pool using the database URL from the environment variables.
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false // Disable SSL because the database server doesnt require it
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false
 });
 
 // Helper function to run database queries.
